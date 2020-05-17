@@ -1,0 +1,169 @@
+' Gambas class file
+
+Private hProcess As Process
+Private VideoBox1 As DrawingArea
+Private TMonitor As Timer
+Private fifofile As File
+Private fifopath As String
+Private mpv As Boolean
+Private audiofile As Boolean
+Property audiomode As Boolean
+
+Event EndVideo
+
+Public Sub _new()
+  
+  TMonitor = New Timer As "TMonitor"
+  TMonitor.Delay = 200
+  
+  VideoBox1 = New DrawingArea(Fmain)
+  With VideoBox1
+    .H = Screen.H
+    .W = Screen.W
+    .X = 0
+    .Y = 0
+    .BackGround = Color.Black
+  End With
+  
+  Shell "mplayer"
+  Shell "mpv"
+  
+  'Ruta del fifo
+  fifopath = "/tmp/mplayerfifo"
+  
+  'Crear el fifo si no existe
+  If Not Exist(fifopath) Then Exec ["mkfifo", fifopath] Wait
+  
+  'Abrir fifo de entrada para mplayer
+  fifofile = Open fifopath For Write Append
+
+End
+
+Public Sub Play(sFilePath As String)
+  
+  Wait 0.1
+  
+  Print #fifofile, ""
+  
+  Select LCase(Right(sFilePath, 3))
+    Case "mp4"
+      
+      ' hProcess = Exec ["mplayer", "-vo", "vdpau", "-vc", "ffmpeg12vdpau,ffh264vdpau", "-nosound", "-input", "file=" & fifopath, "-really-quiet", "-wid", CStr(VideoBox1.Handle), sFilePath] For Read Write As "Process"
+      mpv = True
+      audiofile = False
+      ' hProcess = Exec ["mpv", "--vo=vdpau", "--input-vo-keyboard=no", "--input-file=" & fifopath, "--no-resume-playback", "--quiet", "--osd-level", "0", "--no-audio", "--wid=" & VideoBox1.Handle, sFilePath] For Read Write As "Process"
+      hProcess = Exec ["mpv", "--input-vo-keyboard=no", "--input-file=" & fifopath, "--no-resume-playback", "--quiet", "--osd-level", "0", "--wid=" & VideoBox1.Handle, sFilePath] For Read Write As "Process"
+
+    Case Like "{mp3,m4a,wav,ogg,wma}"
+      ' //////// Audio files /////////
+      mpv = False
+      audiofile = True
+      Debug
+      hProcess = Exec ["mplayer", "-vo", "null", "-ao", "alsa", "-input", "file=" & fifopath, "-really-quiet", sFilePath] For Read Write As "Process"
+      
+    Case Else
+      
+      mpv = False
+      audiofile = False
+      ' hProcess = Exec ["mplayer", "-vo", "vdpau", "-nosound", "-input", "file=" & fifopath, "-really-quiet", "-wid", CStr(VideoBox1.Handle), sFilePath] For Read Write As "Process"
+      hProcess = Exec ["mplayer", "-ao", "alsa", "-input", "file=" & fifopath, "-really-quiet", "-wid", CStr(VideoBox1.Handle), sFilePath] For Read Write As "Process"
+      
+  End Select
+  
+  PlayerSeek
+  TMonitor.Enabled = True
+  
+End
+
+Public Sub Process_error(sError As String)
+  
+  Print sError
+  
+End
+
+Public Sub Process_read()
+
+  Dim sData As String
+  sData = Read #Last, -250
+  Print sData
+
+End
+
+Public Sub PlayerStop()
+
+  If Not hProcess Then Return
+  If Not hProcess.State = Process.Running Then Return
+  ' Try Print #hProcess, "q"
+  
+    Print #fifofile, "stop"
+  
+  ' Catch
+  '   Debug Error.Text
+
+End
+
+Private Sub PlayerSeek()
+
+  If Not hProcess Then Return
+  If Not hProcess.State = Process.Running Then Return
+  
+  If mpv Then
+    Print #fifofile, "seek -1 relative"
+  Else
+    Print #fifofile, "seek -1 0"
+  Endif
+  
+  PlayerPause
+
+End
+
+Public Sub PlayerPause()
+  
+  If Not hProcess Then Return
+  If Not hProcess.State = Process.Running Then Return
+  
+  If mpv Then
+    Print #fifofile, "cycle pause"
+  Else
+    Print #fifofile, "pause"
+  Endif
+  
+End
+
+Public Sub PlayerClose()
+  
+  If Not hProcess Then Return
+  If Not hProcess.State = Process.Running Then Return
+  
+  If mpv Then
+    Shell "pkill mpv"
+  Else
+    Shell "pkill mplayer"
+  Endif
+  Debug "Player Close"
+  
+End
+
+Public Sub TMonitor_Timer()
+
+ ' Debug
+  
+  If hProcess.State = Process.Stopped Then
+    Raise EndVideo
+    TMonitor.enabled = False
+  Endif
+
+End
+
+Private Function audiomode_Read() As Boolean
+
+  Return audiofile
+
+End
+
+Private Sub audiomode_Write(Value As Boolean)
+
+  ' audiofile = Value
+  Debug "Solo lectura"
+
+End

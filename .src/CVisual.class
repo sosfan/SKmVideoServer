@@ -1,0 +1,120 @@
+' Gambas class file
+
+Private pl As MediaPipeline
+Private DrawVisual As DrawingArea
+' Private StateV As Boolean
+' Property StateVis As Boolean
+
+Private Sub SetVisualization()
+  
+  Dim src, vsz, vcv, snk As MediaControl
+  Dim vsp As MediaFilter
+  Dim APos As Short
+  Dim ListVisual As New String[]
+  DrawVisual = New DrawingArea(Fmain)
+  ResizeArea
+  
+  With ListVisual
+    ' .add("goom")
+    ' .add("goom2k1")
+    '.add("libvisual_jess")
+    '.add("libvisual_corona")
+    .add("libvisual_infinite")
+    ' .add("libvisual_oinksie")
+    ' .add("libvisual_lv_analyzer")
+    .add("wavescope")
+    ' .add("monoscope")
+  End With
+  
+  APos = Rand(0, ListVisual.Max)
+  
+  pl = New MediaPipeline As "Pipeline"
+   
+  src = New MediaControl(pl, "alsasrc")
+  vsz = New MediaControl(pl, ListVisual[APos])
+
+  If ListVisual[APos] = "wavescope" Then
+    vsz["style"] = 2
+  End If
+
+  vcv = New MediaControl(pl, "videoconvert")
+  snk = New MediaControl(pl, "ximagesink")
+
+  src.LinkTo(vsz)
+
+  If ListVisual[APos] <> "wavescope" Then
+  
+    vsp = New MediaFilter(pl, "video/x-raw, width=500, height=500")
+    vsz.LinkTo(vsp)
+    vsp.LinkTo(vcv)
+  
+  Else
+
+    vsz.LinkTo(vcv)
+
+  End If
+
+  vcv.LinkTo(snk)
+   
+  snk.SetWindow(DrawVisual)
+  
+End
+
+Public Sub StartVis()
+  
+  pl.Play
+  DrawVisual.Show
+  ' StateV = True
+  Debug "Start Visualization"
+  
+End
+
+' Public Sub PauseVis()
+'   
+'   pl.Pause
+'   DrawVisual.Hide
+'   StateV = False
+'   Debug "Pause Visualization"
+'   
+' End
+
+Public Sub StopVis()
+  
+  pl.Stop
+  pl.Close
+  DrawVisual.Hide
+  ' StateV = False
+  Debug "Close Visualization"
+  
+End
+
+Public Sub _new()
+  
+  SetVisualization
+  
+End
+
+Public Sub ResizeArea()
+  
+  With DrawVisual
+    .x = 0
+    .Y = 0
+    .W = Fmain.W
+    .H = Fmain.H - 210
+    .Background = Color.Black
+    .Visible = True
+  End With
+  
+End
+' 
+' Private Function StateVis_Read() As Boolean
+' 
+'   Return StateV
+' 
+' End
+' 
+' Private Sub StateVis_Write(Value As Boolean)
+' 
+'   Debug "Only read"
+' 
+' End

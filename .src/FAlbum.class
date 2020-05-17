@@ -1,0 +1,43 @@
+' Gambas class file
+
+Private rcont As Integer
+Private gcont As Integer
+Private bcont As Integer
+Private rSwitch As Boolean
+
+Property SongName As String
+
+
+Public Sub colorchange_Timer()
+
+  If rSwitch = False Then
+  If rcont < 200 Then
+    Inc rcont
+    Panel1.Background = Color.RGB(rcont, gcont, bcont)
+  Else
+    rSwitch = True
+  Endif
+Else
+  If rcont >= 1 Then
+    Dec rcont
+    Panel1.Background = Color.RGB(rcont, gcont, bcont)
+  Else
+    rSwitch = False
+    gcont = Rnd(1, 255)
+    bcont = Rnd(1, 255)
+    Endif
+Endif
+
+End
+
+Private Function SongName_Read() As String
+
+  Return SongTextName.Text
+
+End
+
+Private Sub SongName_Write(Value As String)
+
+  SongTextName.Text = Value
+
+End

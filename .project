@@ -1,0 +1,12 @@
+# Gambas Project File 3.0
+Title=SKm Jukebox Video Server
+Startup=Fmain
+Version=0.0.65
+Component=gb.image
+Component=gb.qt4
+Component=gb.form
+Component=gb.net
+Component=gb.media
+TabSize=2
+Language=en_US
+Packager=1

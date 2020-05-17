@@ -1,0 +1,31 @@
+# Gambas Form File 3.0
+
+{ Form Form
+  MoveScaled(0,0,146.2857,30)
+  Border = False
+  { Panel1 Panel
+    MoveScaled(1,1,28,28)
+    { CoverPic PictureBox
+      MoveScaled(1,1,26,26)
+      Picture = Picture["resource/default.jpg"]
+      Stretch = True
+    }
+  }
+  { colorchange #Timer
+    #MoveScaled(1,28)
+    Enabled = True
+    Delay = 20
+  }
+  { InfoLabel TextLabel
+    MoveScaled(32,2,112,5)
+    Font = Font["Bold,+5"]
+    Foreground = Color.Yellow
+    Text = ("Sonando ahora:")
+    Alignment = Align.Left
+  }
+  { SongTextName TextLabel
+    MoveScaled(32,6,111,22)
+    Font = Font["Bold,+10"]
+    Foreground = Color.White
+  }
+}

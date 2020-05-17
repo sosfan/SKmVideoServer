@@ -1,0 +1,187 @@
+' Gambas class file
+
+Private $iId As Integer
+Private sFile As String
+Private mPlayer As New CPlayer As "mPlayer"
+Private Visualizer As CVisual
+Private infoAlbum As FAlbum
+
+Public Sub _new()
+  
+  Me.FullScreen = True
+  listen()
+  
+End
+
+Public Sub Form_Open()
+  
+  hidecursor
+  infoAlbum = New FAlbum(Fmain)
+  infoAlbum.Hide
+  
+End
+
+Private Sub hidecursor()
+  
+  Dim imgcur As Cursor
+  imgcur = New Cursor(Picture["resource/null.png"])
+  FMain.Mouse = Mouse.Custom
+  FMain.Cursor = imgcur
+  
+End
+
+Private Sub listen()
+  
+  With MyServerSocket
+    'TCP
+    .Type = Net.Internet
+    ' The port to listen to
+    .Port = 5010
+    ' we start listening
+    .Listen(0)
+  End With
+  
+End
+
+Public Sub MyServerSocket_Connection(sHost As String)
+
+  Dim Obj As Socket
+
+  If MyServerSocket.Status <= Net.Inactive Then Return
+  Print "Conexion solicitada : " & sHost & Chr(13) & Chr(10)
+  
+  Obj = MyServerSocket.Accept()
+  Obj.Blocking = False
+  Inc $iId
+  Obj.Tag = [$iId, 0, ""]
+  
+  If Obj.Status = Net.Connected Then
+    Print "Conexion de " & Obj.RemoteHost & ":" & Obj.RemotePort & " aceptada (local port " & Obj.LocalPort & ")" & Chr(13) & Chr(10) 
+    
+    'Wellcome
+    Write #obj, "<Bienvenido>\n", 13
+  End If
+  
+End
+
+Public Sub Socket_Read()
+
+  Dim sBuf As String
+
+  If Last.Status <> Net.Connected Then Return
+  Read #Last, sBuf, Lof(Last)
+  Print "Socket #" & Last.Tag[0] & " --> " & sBuf & "\n"
+    
+  Last.Tag[1] = 0
+  Last.Tag[2] = sBuf
+  
+  Select sBuf
+    Case "<CANCEL>"
+      mPlayer.PlayerStop
+    Case "<PAUSE>"
+      mPlayer.PlayerPause
+    Case "<POWEROFF>"
+      Exec ["poweroff"]
+    Case "<DELETEFILE>"
+      DeleteFile
+    Case "<ENDFILE>"
+      mPlayer.PlayerClose
+    Case Else
+      ' mPlayer.stop
+      mPlayer.Play(User.Home & "/tmp/" & sBuf)
+      sFile = sBuf
+      Select LCase(Right(sBuf, 3))
+        Case Like "{mp3,m4a,wav,ogg,wma}"
+          ' SetVisualization
+          If Object.IsValid(Visualizer) = False Then
+            Visualizer = New CVisual
+            Visualizer.StartVis
+          Endif
+          'show info album
+          infoAlbum.Show
+          infoAlbum.SongName = Left(sBuf, -4)
+          infoAlbum.Raise
+      End Select
+  End Select
+  
+  Socket_Write
+  Catch
+    Debug Error.Text
+End
+
+Public Sub Socket_Write()
+  
+  Dim hSocket As Socket = Last
+  Dim iInd As Integer
+  
+  'Debug hSocket;; hSocket.Tag
+  iInd = hSocket.Tag[1]
+  If iInd < 0 Then Return
+  
+  Do
+    Inc iInd
+    If iInd > 1 Then
+      hSocket.Tag[1] = -1
+      Return
+    Endif
+    
+    'Debug iInd
+    Try Print #hSocket, "<OK>\n";
+    If Error Then 
+      Debug Error.Text
+      Break
+    Endif
+  Loop
+  
+  hSocket.Tag[1] = iInd
+  
+Catch
+  
+End
+
+Public Sub mPlayer_EndVideo()
+  
+  'kill gst process
+  DestroyVisualizer
+  
+  'hide info album
+  infoAlbum.Hide
+  
+  Catch
+    Debug Error.Text
+  
+End
+
+Private Sub DeleteFile()
+  
+  Try Kill User.Home & "/tmp/" & sFile
+  
+  Catch
+    Debug Error.Text
+  
+End
+
+Private Sub DestroyVisualizer()
+  
+  If Object.Count(Visualizer) > 0 Then
+    Visualizer.StopVis
+    Visualizer = Null
+    Debug "Destroy Visualizer"
+  Endif
+  
+End
+
+Public Sub Form_Close()
+
+  Quit
+
+End
+
+Public Sub Form_Resize()
+
+  With infoAlbum
+    .X = Fmain.W / 2 - 512
+    .Y = Fmain.H - 210
+  End With
+
+End
